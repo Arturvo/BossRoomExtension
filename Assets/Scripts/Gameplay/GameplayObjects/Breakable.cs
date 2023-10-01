@@ -116,6 +116,11 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects
             }
         }
 
+        public void ReceiveMana(ServerCharacter inflicter, int mana)
+        {
+            // currently mana effects don't apply to breakables
+        }
+
         private void Break()
         {
             IsBroken.Value = true;

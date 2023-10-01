@@ -28,6 +28,9 @@ namespace Unity.BossRoom.Gameplay.Actions
         [Tooltip("How long the effect this Action leaves behind will last, in seconds")]
         public float EffectDurationSeconds;
 
+        [Tooltip("How often the effect of this action should repeat, in seconds (e.g. how often the effect of an aura should be applied)")]
+        public float EffectRepeatSeconds;
+
         [Tooltip("After this Action is successfully started, the server will discard any attempts to perform it again until this amount of time has elapsed.")]
         public float ReuseTimeSeconds;
 

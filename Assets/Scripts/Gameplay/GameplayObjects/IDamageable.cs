@@ -18,6 +18,13 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects
         void ReceiveHP(ServerCharacter inflicter, int HP);
 
         /// <summary>
+        /// Receive mana regeneration or drain.
+        /// </summary>
+        /// <param name="inflicter">The Character responsible for the regeneration/drain. Can be null. </param>
+        /// <param name="mana">The mana to receive. Negative value is drain, positive is regeneration. </param>
+        void ReceiveMana(ServerCharacter inflicter, int mana);
+
+        /// <summary>
         /// The NetworkId of this object.
         /// </summary>
         ulong NetworkObjectId { get; }

@@ -16,9 +16,10 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
     /// Contains all NetworkVariables, RPCs and server-side logic of a character.
     /// This class was separated in two to keep client and server context self contained. This way you don't have to continuously ask yourself if code is running client or server side.
     /// </summary>
-    [RequireComponent(typeof(NetworkHealthState),
-        typeof(NetworkLifeState),
-        typeof(NetworkAvatarGuidState))]
+    [RequireComponent(typeof(NetworkHealthState))]
+    [RequireComponent(typeof(NetworkLifeState))]
+    [RequireComponent(typeof(NetworkManaState))]
+    [RequireComponent(typeof(NetworkAvatarGuidState))]
     public class ServerCharacter : NetworkBehaviour, ITargetable
     {
         [FormerlySerializedAs("m_ClientVisualization")]
@@ -57,6 +58,8 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
 
         public NetworkHealthState NetHealthState { get; private set; }
 
+        public NetworkManaState NetManaState { get; private set; }
+
         /// <summary>
         /// The active target of this character.
         /// </summary>
@@ -69,6 +72,12 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
         {
             get => NetHealthState.HitPoints.Value;
             private set => NetHealthState.HitPoints.Value = value;
+        }
+
+        public int Mana
+        {
+            get => NetManaState.Mana.Value;
+            private set => NetManaState.Mana.Value = value;
         }
 
         public NetworkLifeState NetLifeState { get; private set; }
@@ -146,6 +155,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
             m_ServerActionPlayer = new ServerActionPlayer(this);
             NetLifeState = GetComponent<NetworkLifeState>();
             NetHealthState = GetComponent<NetworkHealthState>();
+            NetManaState = GetComponent<NetworkManaState>();
             m_State = GetComponent<NetworkAvatarGuidState>();
         }
 
@@ -156,6 +166,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
             {
                 NetLifeState.LifeState.OnValueChanged += OnLifeStateChanged;
                 m_DamageReceiver.DamageReceived += ReceiveHP;
+                m_DamageReceiver.ManaDrainReceived += ReceiveMana;
                 m_DamageReceiver.CollisionEntered += CollisionEntered;
 
                 if (IsNpc)
@@ -169,6 +180,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
                     PlayAction(ref startingAction);
                 }
                 InitializeHitPoints();
+                InitializeMana();
             }
         }
 
@@ -179,6 +191,7 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
             if (m_DamageReceiver)
             {
                 m_DamageReceiver.DamageReceived -= ReceiveHP;
+                m_DamageReceiver.ManaDrainReceived -= ReceiveMana;
                 m_DamageReceiver.CollisionEntered -= CollisionEntered;
             }
         }
@@ -251,6 +264,20 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
                     {
                         LifeState = LifeState.Fainted;
                     }
+                }
+            }
+        }
+
+        void InitializeMana()
+        {
+            Mana = CharacterClass.BaseMana.Value;
+
+            if (!IsNpc)
+            {
+                SessionPlayerData? sessionPlayerData = SessionManager<SessionPlayerData>.Instance.GetPlayerData(OwnerClientId);
+                if (sessionPlayerData is { HasCharacterSpawned: true })
+                {
+                    Mana = sessionPlayerData.Value.CurrentMana;
                 }
             }
         }
@@ -349,6 +376,42 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character
                 }
 
                 m_ServerActionPlayer.ClearActions(false);
+            }
+        }
+
+        /// <summary>
+        /// Receive a mana change from somewhere. Could be regeneration or drain.
+        /// </summary>
+        /// <param name="inflicter">Person dishing out this regeneration/drain. Can be null. </param>
+        /// <param name="mana">The mana to receive. Positive value is regeneration. Negative is drain.  </param>
+        void ReceiveMana(ServerCharacter inflicter, int mana)
+        {
+            //to our own effects, and modify the regeneration or drain as appropriate. But in this game, we just take it straight.
+            if (mana > 0)
+            {
+                // mana regeneration triggers the same GameplayActivity as healing.
+                m_ServerActionPlayer.OnGameplayActivity(Action.GameplayActivity.Healed);
+            }
+            else
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // Don't apply drain if god mode is on
+                if (NetLifeState.IsGodMode.Value)
+                {
+                    return;
+                }
+#endif
+                // mana drain triggers the same GameplayActivity as damage.
+                m_ServerActionPlayer.OnGameplayActivity(Action.GameplayActivity.AttackedByEnemy);
+                serverAnimationHandler.NetworkAnimator.SetTrigger("HitReact1");
+            }
+
+            Mana = Mathf.Clamp(Mana + mana, 0, CharacterClass.BaseMana.Value);
+
+            if (m_AIBrain != null)
+            {
+                //let the brain know about the modified amount of damage we received.
+                m_AIBrain.ReceiveMana(inflicter, mana);
             }
         }
 

@@ -75,6 +75,19 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects.Character.AI
             }
         }
 
+        /// <summary>
+        /// Called when we received some mana. Positive mana is regeneration, negative is drain.
+        /// </summary>
+        /// <param name="inflicter">The person who drained or regenerated us. May be null. </param>
+        /// <param name="amount">The amount of mana received. Negative is drain. </param>
+        public void ReceiveMana(ServerCharacter inflicter, int amount)
+        {
+            if (inflicter != null && amount < 0)
+            {
+                Hate(inflicter);
+            }
+        }
+
         private AIStateType FindBestEligibleAIState()
         {
             // for now we assume the AI states are in order of appropriateness,

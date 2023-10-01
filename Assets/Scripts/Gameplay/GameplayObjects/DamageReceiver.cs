@@ -9,6 +9,8 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects
     {
         public event Action<ServerCharacter, int> DamageReceived;
 
+        public event Action<ServerCharacter, int> ManaDrainReceived;
+
         public event Action<Collision> CollisionEntered;
 
         [SerializeField]
@@ -21,6 +23,15 @@ namespace Unity.BossRoom.Gameplay.GameplayObjects
                 DamageReceived?.Invoke(inflicter, HP);
             }
         }
+
+        public void ReceiveMana(ServerCharacter inflicter, int mana)
+        {
+            if (IsDamageable())
+            {
+                ManaDrainReceived?.Invoke(inflicter, mana);
+            }
+        }
+
 
         public IDamageable.SpecialDamageFlags GetSpecialDamageFlags()
         {

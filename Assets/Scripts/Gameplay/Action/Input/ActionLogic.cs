@@ -15,6 +15,7 @@ namespace Unity.BossRoom.Gameplay.Actions
         Emote,
         RangedFXTargeted,
         AoE,
+        Aura,
         Trample,
         ChargedShield,
         Stunned,

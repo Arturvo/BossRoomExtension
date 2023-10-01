@@ -448,6 +448,9 @@ namespace Unity.BossRoom.Gameplay.UserInput
                     resultData.CancelMovement = true;
                     resultData.ShouldQueue = false;
                     return;
+                case ActionLogic.Aura:
+                    resultData.ShouldClose = false;
+                    return;
             }
         }
 
